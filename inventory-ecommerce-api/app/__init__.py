@@ -3,7 +3,7 @@ import logging
 from flask import Flask
 from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
-from app.api.inventory.cart import cart_bp as cart
+from .api.inventory.cart import cart_bp as cart
 from app.api.inventory.category import category_bp as category 
 from app.api.inventory.stock import stock_bp as stock_bp
 from app.api.inventory.products import products_bp 
