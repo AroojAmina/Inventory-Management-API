@@ -160,4 +160,4 @@ class CheckoutView(Resource):
 
 # Register the resources
 api.add_resource(CartView, "/cart/<int:customer_id>/")
-api.add_resource(CheckoutView, "/cart/<int:customera_id>/checkout/")
+api.add_resource(CheckoutView, "/cart/<int:customer_id>/checkout/")

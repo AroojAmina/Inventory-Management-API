@@ -73,10 +73,11 @@ class ProductListResource(Resource):
             if not data:
                 return {"error": "Invalid input data"}, 400
 
-            try:
-                product_data = product_schema.load(data)
-            except ValidationError as ve:
-                return {"error": ve.messages}, 400
+            product_data = product_schema.load(data)
+            if product_data is None:
+                return {"error": "Invalid product data"}, 400
+
+            quantity = product_data.pop('quantity', 0) if isinstance(product_data, dict) else 0
 
             # Create new product instance
             product = Product(**product_data)
@@ -84,7 +85,6 @@ class ProductListResource(Resource):
             db.session.flush()
 
             # Handle stock as part of product
-            quantity = data.get('quantity', 0)
             stock = Stock(
                 product_id=product.id,
                 quantity=quantity,
@@ -94,10 +94,7 @@ class ProductListResource(Resource):
             db.session.commit()
 
             return {
-                "message": "Product created successfully",
-                "id": product.id,
-                "quantity": stock.quantity
-            }, 201
+                "message": "Product created successfully",}, 201
 
         except (IntegrityError, DataError, OperationalError, SQLAlchemyError) as e:
             db.session.rollback()

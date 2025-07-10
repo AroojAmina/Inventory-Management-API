@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError, DataError, OperationalError, SQLAlche
 from marshmallow.exceptions import ValidationError
 from app.core.models import Product, Transaction, TransactionItem, Stock, Customer, StockMovement
 from app.schemas.product_schema import ProductSchema
+from app.schemas.transaction_schema import TransactionSchema
 from app.utils.db_utils import db
 from math import ceil
 import logging
@@ -14,6 +15,8 @@ sales_bp = Blueprint("sales", __name__)
 api = Api(sales_bp)
 
 product_schema = ProductSchema()
+transaction_schema = TransactionSchema()
+transaction_list_schema = TransactionSchema(many=True)
 
 def abort_json(status_code, message):
     response = jsonify(error=message)
@@ -56,19 +59,16 @@ class SalesResource(Resource):
             pages = ceil(total / count)
 
             # Paginate the results
-            paginated_query = query.order_by(Transaction.created_at.desc()).paginate(
-                page, count, error_out=False
+            paginated_query = db.paginate(
+                query.order_by(Transaction.timestamp.desc()),
+                page=page,
+                per_page=count,
+                error_out=False
             )
 
             records = []
             for transaction in paginated_query.items:
-                # Fetch related transaction items and stock
-                transaction_dict = {
-                    **product_schema.dump(transaction),
-                    "items": [product_schema.dump(item) for item in transaction.items],
-                    "stock": [product_schema.dump(stock) for stock in transaction.stock],
-                    "customer": product_schema.dump(transaction.customer)  # Add customer info
-                }
+                transaction_dict = transaction_schema.dump(transaction)
                 records.append(transaction_dict)
 
             return {
@@ -92,28 +92,20 @@ class SalesResource(Resource):
 
             try:
                 # Validate and deserialize input
-                transaction_data = product_schema.load(data)
+                transaction_data = transaction_schema.load(data)
             except ValidationError as ve:
                 return {"error": ve.messages}, 400
 
+            if not isinstance(transaction_data, dict):
+                return {"error": "Invalid transaction data"}, 400
+
             # Check if customer exists, if not, create a new one
-            customer_data = data.get('customer')
-            if customer_data:
-                customer = Customer.query.filter_by(email=customer_data['email']).first()
-                if not customer:
-                    # Create new customer if doesn't exist
-                    customer = Customer(**customer_data)
-                    db.session.add(customer)
-                    db.session.commit()
-            else:
-                return {"error": "Customer data is required"}, 400
+            customer_id = transaction_data.get('customer_id')
+            if not customer_id:
+                return {"error": "customer_id is required"}, 400
 
             # Create new transaction instance
-            transaction = Transaction(
-                customer_id=customer.id, **transaction_data
-            )
-            
-            # Add to session and commit
+            transaction = Transaction(**transaction_data)
             db.session.add(transaction)
             db.session.commit()
             
@@ -132,13 +124,7 @@ class SalesDetailResource(Resource):
             if not transaction:
                 return {"message": "Transaction not found"}, 404
 
-            # Fetch related transaction items and stock
-            transaction_dict = {
-                **product_schema.dump(transaction),
-                "items": [product_schema.dump(item) for item in transaction.items],
-                "stock": [product_schema.dump(stock) for stock in transaction.stock],
-                "customer": product_schema.dump(transaction.customer)  # Add customer info
-            }
+            transaction_dict = transaction_schema.dump(transaction)
             return transaction_dict, 200
 
         except (IntegrityError, DataError, OperationalError, SQLAlchemyError) as e:
@@ -156,7 +142,7 @@ class SalesDetailResource(Resource):
 
             try:
                 # Validate input
-                transaction_data = product_schema.load(body, partial=True)
+                transaction_data = transaction_schema.load(body, partial=True)
             except ValidationError as ve:
                 return {"error": ve.messages}, 400
 
@@ -203,10 +189,19 @@ class SalesCheckoutView(Resource):
             if not items:
                 return {"error": "No items in the transaction"}, 400
 
+            # Check for cart_id in the request data
+            cart_id = data.get("cart_id")
+            # Accept both int and string representations of cart_id, and treat 0 or empty string as invalid
+            if cart_id is None or str(cart_id).strip() == "" or str(cart_id) == "0":
+                return {"error": "cart_id is required"}, 400
+
             # Validate if stock is available for each item
             for item_data in items:
-                product_id = item_data["product_id"]
-                quantity = item_data["quantity"]
+                product_id = item_data.get("product_id")
+                quantity = item_data.get("quantity")
+
+                if product_id is None or quantity is None:
+                    return {"error": "Each item must have product_id and quantity"}, 400
 
                 # Check if product exists and if enough stock is available
                 product = Product.query.filter_by(id=product_id).first()
@@ -219,25 +214,45 @@ class SalesCheckoutView(Resource):
 
             # If all items are valid, proceed with the sale
             customer_data = data.get('customer')
+            if not customer_data or not customer_data.get('email'):
+                return {"error": "Customer information with email is required"}, 400
+
             customer = Customer.query.filter_by(email=customer_data['email']).first()
             if not customer:
                 return {"error": "Customer not found"}, 404
 
-            transaction = Transaction(status="Completed", customer_id=customer.id)
+            total_amount = 0
+            for item_data in items:
+                product_id = item_data.get("product_id")
+                quantity = item_data.get("quantity")
+                product = Product.query.get(product_id)
+                if not product:
+                    return {"error": f"Product {product_id} not found for checkout"}, 404
+                total_amount += product.price * quantity
+
+            transaction = Transaction(
+                cart_id=cart_id,
+                customer_id=customer.id,
+                status="Completed",
+                total_amount=total_amount
+            )
             db.session.add(transaction)
             db.session.commit()
 
             # Add items to the transaction
             for item_data in items:
-                product_id = item_data["product_id"]
-                quantity = item_data["quantity"]
+                product_id = item_data.get("product_id")
+                quantity = item_data.get("quantity")
 
                 product = Product.query.get(product_id)
+                if not product:
+                    return {"error": f"Product {product_id} not found for checkout"}, 404
+
                 transaction_item = TransactionItem(
                     transaction_id=transaction.id,
                     product_id=product.id,
                     quantity=quantity,
-                    price=product.price
+                    price_per_unit=product.price
                 )
                 db.session.add(transaction_item)
 

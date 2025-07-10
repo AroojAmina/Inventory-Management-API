@@ -27,12 +27,12 @@ def create_app():
 
     # Register blueprints
     app.register_blueprint(cart, url_prefix='/api/')
-    app.register_blueprint(category, url_prefix='/api/category/')
+    app.register_blueprint(category, url_prefix='/api/category')
     app.register_blueprint(stock_bp, url_prefix='/api/stock/')
-    app.register_blueprint(products_bp, url_prefix='/api/products')
-    app.register_blueprint(return_products_bp, url_prefix='/api/return_products')
+    app.register_blueprint(products_bp, url_prefix='/api/')
+    app.register_blueprint(return_products_bp, url_prefix='/api/return_products/')
     app.register_blueprint(customer_bp, url_prefix='/api/')
-    app.register_blueprint(sales_bp, url_prefix='/api/sales')
+    app.register_blueprint(sales_bp, url_prefix='/api/')
     
     # Initialize database
 

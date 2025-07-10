@@ -5,3 +5,6 @@ class ProductSchema(Schema):
     name = fields.Str(required=True)
     price = fields.Float(required=True)
     category_id = fields.Int(required=True)
+    quantity = fields.Int(load_only=True) 
+    
+    # For creating stock with product

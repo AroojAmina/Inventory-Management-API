@@ -88,7 +88,7 @@ class CustomerDetailAPI(Resource):
             for key, value in updated_data.items():
                 setattr(customer, key, value)
             db.session.commit()
-            return customer_schema.dump(customer), 200
+            return {"message": "Customer updated successfully"}, 200
         except ValidationError as ve:
             return {"error": ve.messages}, 400
         except IntegrityError as ie:
