@@ -21,6 +21,7 @@ customer_schema = CustomerSchema()
 customer_list_schema = CustomerSchema(many=True)
 
 class CustomerListAPI(Resource):
+    @jwt_required()
     def get(self):
         """Get list of customers with pagination"""
         try:
@@ -52,6 +53,7 @@ class CustomerListAPI(Resource):
             logging.error(f"Error fetching customers: {e}")
             return {"error": "Internal server error while fetching customers"}, 500
 
+    @jwt_required()
     def post(self):
         try:
             data = request.get_json()
@@ -72,12 +74,14 @@ class CustomerListAPI(Resource):
             
 
 class CustomerDetailAPI(Resource):
+    @jwt_required()
     def get(self, id):
         customer = Customer.query.get(id)
         if not customer:
             return {"message": "Customer not found"}, 404
         return customer_schema.dump(customer), 200
 
+    @jwt_required()
     def put(self, id):
         customer = Customer.query.get(id)
         if not customer:
@@ -98,6 +102,7 @@ class CustomerDetailAPI(Resource):
             db.session.rollback()
             return {"error": str(e)}, 500
 
+    @jwt_required()
     def delete(self, id):
         customer = Customer.query.get(id)
         if not customer:

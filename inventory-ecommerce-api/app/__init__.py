@@ -10,8 +10,10 @@ from app.api.inventory.products import products_bp
 from app.api.inventory.customer import customer_bp
 from app.api.inventory.sales import sales_bp
 from app.api.inventory.return_products import return_products_bp
+from app.api.base import auth_bp
 from app.utils.db_utils import db
 from config import Config
+from sqlalchemy import text
 
 def create_app():
     app = Flask(__name__)
@@ -33,6 +35,7 @@ def create_app():
     app.register_blueprint(return_products_bp, url_prefix='/api/return_products/')
     app.register_blueprint(customer_bp, url_prefix='/api/')
     app.register_blueprint(sales_bp, url_prefix='/api/')
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
     
     # Initialize database
 
@@ -40,7 +43,7 @@ def create_app():
     @app.route('/healthcheck')
     def healthcheck():
         try:
-            db.session.execute('SELECT 1')
+            db.session.execute(text('SELECT 1'))
             return 'OK', 200
         except Exception as e:
             return f'Database Error: {str(e)}', 500

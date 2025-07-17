@@ -24,7 +24,7 @@ def abort_json(status_code, message):
 
 
 class CartView(Resource):
-    
+    @jwt_required()
     def get(self, customer_id):
         try:
             cart = Cart.query.filter_by(customer_id=customer_id).first()
@@ -35,7 +35,7 @@ class CartView(Resource):
             logging.error(f"Error fetching cart: {e}")
             abort_json(500, "Internal server error")
 
-    
+    @jwt_required()
     def post(self, customer_id):
         try:
             data = request.get_json()
@@ -68,7 +68,7 @@ class CartView(Resource):
             logging.error(f"Error adding product to cart: {e}")
             abort_json(500, "Internal server error")
 
-   
+    @jwt_required()
     def delete(self, customer_id):
         try:
             data = request.get_json()
@@ -93,6 +93,7 @@ class CartView(Resource):
 
 
 class CheckoutView(Resource):
+    @jwt_required()
     def post(self, customer_id):
         try:
             
