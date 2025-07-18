@@ -10,6 +10,7 @@ from app.api.inventory.products import products_bp
 from app.api.inventory.customer import customer_bp
 from app.api.inventory.sales import sales_bp
 from app.api.inventory.return_products import return_products_bp
+from app.api.inventory.user import user_bp
 from app.api.base import auth_bp
 from app.utils.db_utils import db
 from config import Config
@@ -36,6 +37,7 @@ def create_app():
     app.register_blueprint(customer_bp, url_prefix='/api/')
     app.register_blueprint(sales_bp, url_prefix='/api/')
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(user_bp, url_prefix='/api/')
     
     # Initialize database
 

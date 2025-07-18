@@ -9,6 +9,7 @@ from app.schemas.product_schema import ProductSchema
 from app.utils.db_utils import db
 from math import ceil
 import logging
+from app.core.permissions import has_permission
 
 products_bp = Blueprint("products", __name__)
 api = Api(products_bp)
@@ -22,8 +23,8 @@ def abort_json(status_code, message):
     abort(response)
 
 class ProductListResource(Resource):
-    # decorators = (jwt_required(),)
-
+    @jwt_required()
+    @has_permission('view_inventory')
     def get(self):
         try:
             page = int(request.args.get("page", 1))
@@ -66,6 +67,8 @@ class ProductListResource(Resource):
             logging.error(f"Error fetching products: {e}")
             return {"error": "Internal server error while fetching products"}, 500
 
+    @jwt_required()
+    @has_permission('edit_inventory')
     def post(self):
         """Create a new product with stock"""
         try:
