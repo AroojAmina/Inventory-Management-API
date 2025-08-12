@@ -10,6 +10,7 @@ from app.schemas.user_schema import UserSchema
 from app.utils.db_utils import db
 from app.core.permissions import check_permission
 
+
 user_bp = Blueprint("user", __name__)
 api = Api(user_bp)
 
