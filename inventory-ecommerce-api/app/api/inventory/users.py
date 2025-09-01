@@ -21,7 +21,6 @@ def abort_json(status_code, message):
     response = jsonify(error=message)
     response.status_code = status_code
     abort(response)
-
 class UserListAPI(Resource):
     @jwt_required()
     def get(self):
@@ -75,19 +74,19 @@ class UserListAPI(Resource):
 
 class UserDetailAPI(Resource):
     @jwt_required()
-    def get(self, id):
+    def get(self, user_id):
         if not check_permission('view_users'):
             return {"msg": "Access forbidden: insufficient permission"}, 403
-        user = User.query.get(id)
+        user = User.query.get(int(user_id))
         if not user:
             return {"message": "User not found"}, 404
         return user_schema.dump(user), 200
 
     @jwt_required()
-    def put(self, id):
+    def put(self, user_id):
         if not check_permission('edit_users'):
             return {"msg": "Access forbidden: insufficient permission"}, 403
-        user = User.query.get(id)
+        user = User.query.get(int(user_id))
         if not user:
             return {"message": "User not found"}, 404
         try:
@@ -112,10 +111,10 @@ class UserDetailAPI(Resource):
             return {"error": str(e)}, 500
 
     @jwt_required()
-    def delete(self, id):
+    def delete(self, user_id):
         if not check_permission('delete_users'):
             return {"msg": "Access forbidden: insufficient permission"}, 403
-        user = User.query.get(id)
+        user = User.query.get(int(user_id))
         if not user:
             return {"message": "User not found"}, 404
         db.session.delete(user)
@@ -126,7 +125,7 @@ class CurrentUserAPI(Resource):
     @jwt_required()
     def get(self):
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = User.query.get(int(user_id))
         if not user:
             return {"message": "User not found"}, 404
         return user_schema.dump(user), 200

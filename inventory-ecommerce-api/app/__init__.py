@@ -14,6 +14,8 @@ from app.api.inventory.users import user_bp
 from app.api.inventory.auth import auth_bp
 from app.utils.db_utils import db
 from config import Config
+from flask_jwt_extended import JWTManager
+from flask import jsonify
 
 def create_app():
     app = Flask(__name__)
@@ -26,6 +28,31 @@ def create_app():
     db.init_app(app)
     jwt = JWTManager(app)
     Migrate(app, db)
+
+
+    jwt = JWTManager(app)
+
+    # Agar token expire ho jaye
+    @jwt.expired_token_loader
+    def expired_token_callback(jwt_header, jwt_payload):
+        return jsonify({
+            "msg": "The token has expired"
+        }), 401
+
+    # Agar token invalid ho (tampered ya wrong format)
+    @jwt.invalid_token_loader
+    def invalid_token_callback(error):
+        return jsonify({
+            "msg": "Invalid token"
+        }), 422
+
+    # Agar token missing ho
+    @jwt.unauthorized_loader
+    def missing_token_callback(error):
+        return jsonify({
+            "msg": "Token is missing"
+        }), 401
+
 
     # Register blueprints
     app.register_blueprint(cart, url_prefix='/api/')
