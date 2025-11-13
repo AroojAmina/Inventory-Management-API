@@ -145,6 +145,13 @@ class User(db.Model):
     role = db.Column(db.String(50), default='customer')
     is_active = db.Column(db.Boolean(), default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    totp_secret = db.Column(db.String(32), nullable=True)   # base32 secret, generate when enabling
+    is_totp_enabled = db.Column(db.Boolean, default=False)
+
+    # For email/sms OTP fallback
+    phone_number = db.Column(db.String(30), nullable=True)
+    otp_code = db.Column(db.String(8), nullable=True)       # store hashed/short-lived if you want
+    otp_expires_at = db.Column(db.DateTime, nullable=True)
 
     customer = db.relationship('Customer', back_populates='user', uselist=False)
 
@@ -156,6 +163,8 @@ class User(db.Model):
 
     def __repr__(self):
         return f'<User {self.email}>'
+    
+    
 
 class Customer(db.Model):
     __tablename__ = 'customers'
