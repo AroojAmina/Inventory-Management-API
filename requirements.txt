@@ -5,3 +5,6 @@ Marshmallow
 Flask-Migrate
 python-dotenv
 flask_jwt_extended
+pyotp == 2.9.0
+twilio == 9.8.6
+fido2 == 2.0.0

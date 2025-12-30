@@ -10,8 +10,12 @@ from app.api.inventory.products import products_bp
 from app.api.inventory.customer import customer_bp
 from app.api.inventory.sales import sales_bp
 from app.api.inventory.return_products import return_products_bp
+from app.api.inventory.users import user_bp
+from app.api.inventory.auth import auth_bp
 from app.utils.db_utils import db
 from config import Config
+from flask_jwt_extended import JWTManager
+from flask import jsonify
 
 def create_app():
     app = Flask(__name__)
@@ -25,6 +29,31 @@ def create_app():
     jwt = JWTManager(app)
     Migrate(app, db)
 
+
+    jwt = JWTManager(app)
+
+    # Agar token expire ho jaye
+    @jwt.expired_token_loader
+    def expired_token_callback(jwt_header, jwt_payload):
+        return jsonify({
+            "msg": "The token has expired"
+        }), 401
+
+    # Agar token invalid ho (tampered ya wrong format)
+    @jwt.invalid_token_loader
+    def invalid_token_callback(error):
+        return jsonify({
+            "msg": "Invalid token"
+        }), 422
+
+    # Agar token missing ho
+    @jwt.unauthorized_loader
+    def missing_token_callback(error):
+        return jsonify({
+            "msg": "Token is missing"
+        }), 401
+
+
     # Register blueprints
     app.register_blueprint(cart, url_prefix='/api/')
     app.register_blueprint(category, url_prefix='/api/category')
@@ -33,6 +62,8 @@ def create_app():
     app.register_blueprint(return_products_bp, url_prefix='/api/return_products/')
     app.register_blueprint(customer_bp, url_prefix='/api/')
     app.register_blueprint(sales_bp, url_prefix='/api/')
+    app.register_blueprint(user_bp, url_prefix='/api/users/')
+    app.register_blueprint(auth_bp, url_prefix='/api/auth/')
     
     # Initialize database
 
