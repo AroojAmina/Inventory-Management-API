@@ -29,9 +29,6 @@ def create_app():
     jwt = JWTManager(app)
     Migrate(app, db)
 
-
-    jwt = JWTManager(app)
-
     # Agar token expire ho jaye
     @jwt.expired_token_loader
     def expired_token_callback(jwt_header, jwt_payload):
@@ -63,7 +60,11 @@ def create_app():
     app.register_blueprint(customer_bp, url_prefix='/api/')
     app.register_blueprint(sales_bp, url_prefix='/api/')
     app.register_blueprint(user_bp, url_prefix='/api/users/')
+    
+    # Register authentication blueprint with all 2FA endpoints
+    # Only register ONCE - all routes in auth.py will be available under /api/auth/
     app.register_blueprint(auth_bp, url_prefix='/api/auth/')
+    
     
     # Initialize database
 
@@ -75,5 +76,22 @@ def create_app():
             return 'OK', 200
         except Exception as e:
             return f'Database Error: {str(e)}', 500
+
+    # Route listing endpoint (for debugging)
+    @app.route('/api/routes', methods=['GET'])
+    def list_routes():
+        """List all registered routes - useful for debugging"""
+        routes = []
+        for rule in app.url_map.iter_rules():
+            methods = ','.join(sorted(rule.methods - {'HEAD', 'OPTIONS'}))
+            routes.append({
+                'endpoint': rule.endpoint,
+                'methods': methods,
+                'path': rule.rule
+            })
+        return jsonify({
+            'total_routes': len(routes),
+            'routes': sorted(routes, key=lambda x: x['path'])
+        }), 200
 
     return app

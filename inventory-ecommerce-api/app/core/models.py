@@ -152,14 +152,34 @@ class User(db.Model):
     phone_number = db.Column(db.String(30), nullable=True)
     otp_code = db.Column(db.String(8), nullable=True)       # store hashed/short-lived if you want
     otp_expires_at = db.Column(db.DateTime, nullable=True)
+    
+    # Login attempt tracking
+    failed_login_attempts = db.Column(db.Integer, default=0)
+    account_locked_until = db.Column(db.DateTime, nullable=True)
+    
+    # Biometric authentication
+    biometric_enabled = db.Column(db.Boolean, default=False)
+    biometric_verified = db.Column(db.Boolean, default=False)
 
     customer = db.relationship('Customer', back_populates='user', uselist=False)
+    login_attempts = db.relationship('LoginAttempt', back_populates='user', lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+    
+    def is_account_locked(self):
+        """Check if account is currently locked"""
+        if self.account_locked_until:
+            return datetime.utcnow() < self.account_locked_until
+        return False
+    
+    def reset_failed_attempts(self):
+        """Reset failed login attempts after successful login"""
+        self.failed_login_attempts = 0
+        self.account_locked_until = None
 
     def __repr__(self):
         return f'<User {self.email}>'
@@ -207,3 +227,21 @@ class Permission(db.Model):
 
     def __repr__(self):
         return f'<Permission {self.name}>'
+
+
+class LoginAttempt(db.Model):
+    __tablename__ = 'login_attempts'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    email = db.Column(db.String(100), nullable=False)  # Store email even if user not found
+    ip_address = db.Column(db.String(45), nullable=True)  # IPv6 compatible
+    user_agent = db.Column(db.String(255), nullable=True)
+    success = db.Column(db.Boolean, default=False)
+    failure_reason = db.Column(db.String(255), nullable=True)  # e.g., "wrong_password", "account_locked", "2fa_failed"
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    user = db.relationship('User', back_populates='login_attempts')
+
+    def __repr__(self):
+        return f'<LoginAttempt {self.id} - {self.email} - Success: {self.success}>'
